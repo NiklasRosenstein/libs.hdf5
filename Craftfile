@@ -1,0 +1,56 @@
+# -*- coding: utf8; mode: python -*-
+# craftr_module(libs.hdf5)
+'''
+This module is a helper to compile the HDF5 library with Craftr.
+As the HDF5 configuration is rather complex and it is already
+done in a CMake file, this Craftfile simply uses CMake to compile
+HDF5.
+
+**Todo**
+
+- Determine output files of the build and update the ``hdf5``
+  Framework accordingly.
+- Support for CMake build on other platforms than Windows
+- Support for detecting an installed version of the HDF5 library.
+  instead of compiling from source.
+
+**Options**
+
+- debug: Produce a debug build.
+- msvc_ver: The name of the CMake Visual Studio project file generator.
+  Defaults to ``Visual Studio 12 2013`
+'''
+
+from craftr import *
+from craftr.ext import rules, platform, options
+
+debug = options.get('debug')
+msvc_ver = options.get('msvc_ver') or 'Visual Studio 12 2013'
+
+# Build from source using CMake?
+if path.isfile(path.local('CMakeLists.txt')):
+  # Make sure the build directory exists.
+  build_dir = project_name
+  path.makedirs(build_dir)
+
+  # Create a command chain that compiles HDF5 with CMake.
+  if platform.name == platform.WIN32:
+    project = rules.run([
+      ['cmake', '-G', msvc_ver, project_dir],
+    ], cwd = build_dir, outputs = [path.join(build_dir, 'HDF5.sln')], pool = 'console')
+    build = rules.run([
+      ['devenv', '/Build', 'Debug' if debug else 'Release', 'HDF5.sln'],
+    ], cwd = build_dir, inputs = project, outputs = None, pool = 'console')  # xxx: todo: outputs
+  else:
+    # XXX Support building for other platforms than Windows
+    error('building hdf5 with CMake currently not supported on ' + platform.name)
+
+  # XXX Determine the library files and create/update the Framework(s).
+  hdf5 = Framework(
+    include = [path.local('src')],
+  )
+
+# Detect the installation of HDF5 on this system.
+else:
+  # XXX You are welcome to submit a patch.
+  error('detection of installed hdf5 library not yet implemented.')
